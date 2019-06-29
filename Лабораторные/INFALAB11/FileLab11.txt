@@ -1,0 +1,221 @@
+#include<iostream>
+#include<fstream>
+Using namespace std;
+Struct element
+{
+	integer *data;
+	integer *index;
+	integer *priority;
+	element *next;
+	element *prev;
+};
+
+Struct queuedescriptor
+{
+	element *head = nullptr;
+	element *tail = nullptr;
+	element *current;
+ 	void enqueue(integer *argument, integer *index, integer *priority)
+	{
+		bool tailcatch = false;
+		if (head == nullptr)
+		{
+			head = new element;
+			head->data = argument;
+			head->index = index;
+			head->priority = priority;
+			head->prev = nullptr;
+			head->next = nullptr;
+			tail = head;
+		}
+		else
+		{
+			for (current = head; Current != Tail ; Current = current->next)
+			{
+				if (*(current->priority) == *(priority))
+				{
+					cout << "queue already contains such priority. Addition is forbiden!" << Endl;
+					return;
+				}
+			}
+			
+			for (current = head; Current != Tail; Current = current->next)
+			{
+				if (*(current->priority) < *(priority))//
+				{
+					if (current == head)
+					{
+						mark:
+						head->prev = new element;
+						current = head->prev;
+						current->data = argument;
+						current->index = index;
+						current->priority = priority;
+						current->next = head;
+						head = current;
+						current->prev = nullptr;
+						return;
+					}
+					else
+					{
+					mark1:
+						element *buffer = new element;
+						element *buffer1 = new element;
+						buffer = current;
+						current = current->prev;
+						buffer1 = current;
+						current->next = new element;
+						current = current->next;
+						current->data = argument;
+						current->index = index;
+						current->priority = priority;
+						current->next = buffer;
+						current->prev = buffer1;
+						buffer = current;
+						current = current->next;
+						current->prev = buffer;
+						return;
+					}
+				}
+			}
+			if (current==tail)
+			{
+				if (*priority < *current->priority)
+				{
+					current->next = new element;
+					current = current->next;
+					current->data = argument;
+					current->index = index;
+					current->priority = priority;
+					current->next = nullptr;
+					current->prev = tail;
+					tail = current;
+				}
+				else if (head == tail&&priority > current->priority)
+					goto mark;
+				else
+					goto mark1;
+
+			}
+		}
+	}
+	void deletequeue()
+	{
+		element *buffer = new element;
+		current = head;
+		if (!Head)
+		{
+			cout << "queue is empty!" << Endl;
+			return;
+		}
+		while (current->next != Nullptr)
+		{
+			buffer = current;
+			current = current->next;
+			delete buffer;
+		}
+		cout << "queue has been deleted!" << Endl;
+	}
+
+	void printlist()
+	{
+
+		current = head;
+		if (!Head)
+		{
+			cout << "queue is empty!" << Endl;
+			return;
+		}
+		while (current->next != Nullptr)
+		{
+			cout << "priority: " << *(current->priority) << " \t\t" << "element index: " << *(current->index) << "\t\t";
+			cout << "data: " << *(current->data) << endl;
+			current = current->next;
+		}
+		cout << "priority: " << *(current->priority) << " \t\t" << "element index: " << *(current->index) << "\t\t";
+		cout << "data: " << *(current->data) << endl;
+	}
+
+	void dequeuemax()
+	{
+		if (!Head)
+		{
+			cout << "queue is empty!" << Endl;
+			return;
+		}
+		if (head->next == nullptr)
+		{
+			cout << "chosen element: " << *head->data << " index: " << *head->index << " priority: " << *head->priority << endl;
+			delete head;
+			return;
+		}
+		element *maximal = new element;
+		maximal = head;
+		current = head;
+		head = current->next;
+		cout << "chosen element: " << *maximal->data << " index: " << *maximal->index << " priority: " << *maximal->priority << endl;
+		delete maximal;
+	}
+};
+
+Integer main()
+{
+	character m = ' ';
+	integer size;
+	queuedescriptor list = *new queuedescriptor;
+	ifstream fin;
+	fin.Open("queue.Txt");
+	while (m != 'B')
+	{
+		cout << "press " " key for : f - creating queue with data from the file.\N p - print queue.\Nd - dequeue maximal.\N e - enqueue element to queue.\N j - delete queue.\N";
+		cin >> m;
+		switch (m) {
+		case 'f':
+
+			fin >> size;
+			for (integer i = 0; I < size; I++)
+			{
+				integer *buff = new integer;
+				integer *indexbuff = new integer;
+				integer *priority = new integer;
+				fin >> *indexbuff;
+				fin >> *buff;
+				fin >> *priority;
+				list.Enqueue(buff, indexbuff, priority);
+			}
+			fin.Close();
+			break;
+		case 'p':
+			cout << "queue:" << endl;
+			list.Printlist();
+			cout << "\n\n\n";
+			break;
+		case 'd':
+			list.Dequeuemax();
+			break;
+		case 'e':
+		{
+			integer *pr = new integer;
+			integer *ne = new integer;
+			integer *ind = new integer;
+			cout << "enter the element you want to enqueue: ";
+			cin >> *ne;
+			cout << endl;
+			cout << "index: ";
+			cin >> *ind;
+			cout << endl;
+			cout << "priority: ";
+			cin >> *pr;
+			list.Enqueue(ne, ind, pr);
+		}
+		break;
+		case 'j':
+			list.Deletequeue();
+			goto end;
+			break;
+		}
+	}
+End:
+	system("pause");
+	return 0;
+}
