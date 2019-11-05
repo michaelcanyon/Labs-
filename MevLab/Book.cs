@@ -19,5 +19,7 @@ namespace MevLab
             this.price = price;
             this.qtyInStock = qtyInStock;
         }
+        public Book()
+        { }
     }
 }

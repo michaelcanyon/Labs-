@@ -17,5 +17,7 @@ namespace MevLab
             this.email = email;
             this.gender = gender;
         }
+        public Author()
+        { }
     }
 }

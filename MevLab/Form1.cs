@@ -22,5 +22,11 @@ namespace MevLab
             Form2 sorts = new Form2();
             sorts.Show();
         }
+
+        private void Button2_Click(object sender, EventArgs e)
+        {
+            Form3 DB =new Form3();
+            DB.Show();
+        }
     }
 }
