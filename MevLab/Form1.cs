@@ -28,5 +28,11 @@ namespace MevLab
             Form3 DB =new Form3();
             DB.Show();
         }
+
+        private void Button4_Click(object sender, EventArgs e)
+        {
+            Form4 PS = new Form4();
+            PS.Show();
+        }
     }
 }
