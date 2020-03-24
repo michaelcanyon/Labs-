@@ -1,25 +1,35 @@
+#include <fcntl.h>
 #include<unistd.h>
 #include<stdio.h>
 #include<dirent.h>
 #include<string.h>
 #include<sys/stat.h>
+#include<sys/types.h>
 #include<stdlib.h>
 char* RmDpDirName(char* fulldir, char* trash_dir,char* strtmp);
-void GetInfo(char *dir, int depth, char* filepath, char* trash_dir, int flag, char* strtmp, char* outdir, int *fileDeskDir, int *fileDeskFile);
+void Getinfo(char *dir, int depth, char* filepath, char* trash_dir, int flag, char* strtmp, char* outdir, int *fileDeskDir, int *fileDescFile);
+void Write_info(char* dirPath, char* WritableFilePath, int *fileDesk, int closeflag, int fileOrDirFlag);
+void Read_info(char* dirPath, char *ReadableFilePath, int *fileDesk, int closeflag, int fileOrDirFlag, long long *readableFileSize);
 
 
 //void pack(char* filepath,)
 int main(int argc, char* argv[])
 {
-  int fileDescriptor;
+  int *fileDescriptorDirectory;
+  int *fileDescriptorFile;
   char* trash_dir=(char*)malloc(256);
   char *dirname=(char*)malloc(1024);
   char* topdir;
+  char* outdir;
   char* strtmp=(char*)malloc(1024);
   //if(argc>=2)
   topdir=argv[1];
+  outdir=argv[2];
   printf("Directory scan of %s\n", topdir);
-  GetInfo(topdir, 0, dirname, trash_dir, 0, strtmp);
+  if(outdir==NULL)
+    Getinfo(topdir, 0, dirname, trash_dir, 0, strtmp,"none",fileDescriptorDirectory, fileDescriptorFile);
+  else
+    Getinfo(topdir, 0, dirname, trash_dir, 0, strtmp,outdir,fileDescriptorDirectory,fileDescriptorFile);
   printf("done.\n");
   exit(0);
 
@@ -54,6 +64,7 @@ void Getinfo(char *dir, int depth, char* filepath, char* trash_dir, int flag, ch
       return;
   }
   chdir(dir);
+  //Читается содержимое текущей и вложенных в неё дирректорий
   while((entry = readdir(dp)) != NULL)
   {
       lstat(entry->d_name, &statbuf);
@@ -64,18 +75,13 @@ void Getinfo(char *dir, int depth, char* filepath, char* trash_dir, int flag, ch
           realpath(entry->d_name, filepath);
           //Отрезать лишнюю дирректорию
           filepath=RmDpDirName(filepath, trash_dir, strtmp);
-          //printf("%s\n", filepath);
-          strtmp=strncat(trash_dir,"/info.txt")
+
+          //Записать в файл информации дирректорию или путь к файлу
           if(outdir=="none")
-            {
-              strtmp=strncat(trash_dir,"/infoDir.txt");
-              Write_info(strtmp,filepath,fileDeskDir,0);
-            }
+              strtmp=strcat(trash_dir,"/infoDir.txt");
           else
-            {
-              strtmp=strncat(outdir,"/infoFile.txt");
-              Write_info(strtmp,filepath,fileDeskDir,0);
-            }
+              strtmp=strcat(outdir,"/infoDir.txt");
+          Write_info(strtmp,filepath,fileDeskDir,0, 0);
           GetInfo(entry->d_name, depth+1, filepath, trash_dir, flag, strtmp, outdir, *fileDeskDir, *fileDescFile);
         }
         else
@@ -83,62 +89,87 @@ void Getinfo(char *dir, int depth, char* filepath, char* trash_dir, int flag, ch
           realpath(entry->d_name, filepath);
           //Отрезать лишнюю дирректорию
           filepath=RmDpDirName(filepath, trash_dir, strtmp);
+
+          //Записать в файл информации дирректорию или путь к файлу
           if(outdir=="none")
-            {
-              strtmp=strncat(trash_dir,"/infoFile.txt");
-              Write_info(strtmp,filepath,fileDeskDir,0);
-            }
+              strtmp=strcat(trash_dir,"/infoFile.txt");
           else
-            {
-              strtmp=strncat(trash_dir,"/infoFile.txt");
-              Write_info(strtmp,filepath,fileDeskDir,0);
-            }
-          Write_info(strtmp,filepath,fileDeskDir,0);
-          printf("%s\n", filepath);
+              strtmp=strcat(outdir,"/infoFile.txt");
+          Write_info(strtmp,filepath,fileDeskDir,0,1);
         }
     }
   chdir("..");
   closedir(dp);
 }
 
-void Write_info(char* dirPath, char* wFname, int *fileDesk, int closeflag)
+void Write_info(char* dirPath, char* WritableFilePath, int *fileDesk, int closeflag, int fileOrDirFlag)
 {
-  int title_size=sizeof(wFname);
+  int title_size=sizeof(WritableFilePath);
   if(*fileDesk==NULL)
-      *fileDesk=open(dirPath, O_WONLY OR O_CREAT, S_IWUSR);
+      *fileDesk=open(dirPath, O_WRONLY || O_CREAT, S_IWUSR);
   if(*fileDesk<0)
     {
       printf("%s", "Error: Unable to open file ");
-      printf("%s\n", wFname);
+      printf("%s\n", WritableFilePath);
       return;
     }
+
+    //Флаг закрытия файла информации
+    if(closeflag)
+      {
+        if(close(*fileDesk)!=0)
+          printf("%n\n", "Unable to close infofile. Аборт, когда допишешь остальное");
+      }
   write(*fileDesk, title_size, sizeof(int));
-  write(*fileDesk,wFname, title_size);
-  if(closeflag)
+  write(*fileDesk,WritableFilePath, title_size);
+
+  //Вычислить и записать размер файла в инфо
+  if(fileOrDirFlag)
+  {
+    void *buffer=NULL;
+    long long file_size;
+    int local_descriptor=open(WritableFilePath, O_RDONLY);
+    if(local_descriptor<0)
     {
-      if(close(*fileDesk)!=0)
-        printf("%n\n", "Unable to close infofile. Аборт, когда допишешь остальное");
+      printf("%s\n", "Error, opening directory file");
+      return;
+    }
+    struct stat statistics;
+    if(fstat(local_descriptor,&statistics)!=-1)
+    {
+      buffer=(char*)malloc(statistics.st_size);
+      file_size=(long long)buffer;
+      close(local_descriptor);
+      write(*fileDesk,file_size, sizeof(long long));
+    }
+
+
     }
 
 }
-void Read_info(char* dirPath, char *rFname, int *fileDesk, int closeflag)
+void Read_info(char* dirPath, char *ReadableFilePath, int *fileDesk, int closeflag, int fileOrDirFlag, long long *readableFileSize)
 {
   int title_size;
   if(*fileDesk==NULL)
-    *fileDesk=open(dirPath, O_RONLY);
+    *fileDesk=open(dirPath, O_RDONLY);
   if(*fileDesk<0)
     {
       printf("%s", "Error: Unable to open file ");
-      printf("%s\n", wFname);
+      printf("%s\n", ReadableFilePath);
       return;
     }
+
+    //Флаг закрытия файла информации
+    if(closeflag)
+      {
+        if(close(*fileDesk)!=0)
+          printf("%n\n", "Unable to close infofile. Аборт, когда допишешь остальное");
+      }
   read(*fileDesk, title_size, sizeof(int));
-  read(*fileDesk,rFname, title_size);
-  if(closeflag)
-    {
-      if(close(*fileDesk)!=0)
-        printf("%n\n", "Unable to close infofile. Аборт, когда допишешь остальное");
-    }
+  read(*fileDesk,ReadableFilePath, title_size);
+  if(fileOrDirFlag)
+    read(*fileDesk, readableFileSize, sizeof(long long));
+
 }
 //1.Тебе нужно добавить в метод записи информации также запись размера файла. Наверное, сразу открывать файл, выполнять сик и запихивать результат в файл.
 //Получается, в рид инфо и райт инфо будет ещё один параметр для размера самого файла
@@ -152,4 +183,4 @@ void Read_info(char* dirPath, char *rFname, int *fileDesk, int closeflag)
 //файле архива.
 //5.Далее освободи все занятые ресурсы
 //6.ПРопиши параметры работы с архивом
-void Select_path_write_info(...)
+//void Select_path_write_info(...)
